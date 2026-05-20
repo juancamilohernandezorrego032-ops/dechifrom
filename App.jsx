@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Transfer from './pages/Transfer';
 import Payments from './pages/Payments';
+import Ajustes from './pages/Ajustes';
 
 // Context para el estado global
 export const AppContext = createContext();
@@ -19,6 +20,8 @@ const App = () => {
       name: 'Juan Camilo',
       pin: '1234',
       balance: 2847500,
+      documentId: '1029384756',
+      accountNumber: '254881023',
       movements: [
         { id: 1, title: 'Nequi recibido', date: 'Hoy 10:32am', amount: 85000, type: 'income', icon: 'fa-wallet' },
         { id: 2, title: 'Mercado Libre', date: 'Ayer 3:15pm', amount: -124900, type: 'expense', icon: 'fa-shopping-cart' },
@@ -101,15 +104,19 @@ const App = () => {
     updateCurrentAccount(updatedUser, updatedMovements);
   };
 
-  // Transferir a otro usuario
+  // Transferir a otro usuario por username (solo con el nombre / selector)
   const transferToUser = (recipientUsername, amount) => {
     const recipient = accounts.find((acc) => acc.username === recipientUsername);
     if (!recipient) {
-      return { success: false, message: 'Usuario no encontrado' };
+      return { success: false, message: 'La cuenta de destino no existe.' };
     }
 
     if (amount > user.balance) {
-      return { success: false, message: 'Saldo insuficiente' };
+      return { success: false, message: 'Saldo insuficiente.' };
+    }
+
+    if (recipient.username === user.username) {
+      return { success: false, message: 'No puedes transferir dinero a tu propia cuenta.' };
     }
 
     // Actualizar saldo del remitente
@@ -121,7 +128,7 @@ const App = () => {
         amount: -amount,
         type: 'expense',
         icon: 'fa-paper-plane',
-        recipient: recipientUsername,
+        recipient: recipient.username,
       },
       ...movements,
     ];
@@ -155,7 +162,7 @@ const App = () => {
     updateCurrentAccount(updatedSender, senderMovements);
     setAccounts((prevAccounts) =>
       prevAccounts.map((acc) =>
-        acc.username === recipientUsername ? updatedRecipient : acc
+        acc.username === recipient.username ? updatedRecipient : acc
       )
     );
 
@@ -296,8 +303,52 @@ const App = () => {
     });
   };
 
+  // Sincronización en la nube con kvdb.io (Permite transferir y ver saldos desde otro computador en tiempo real)
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await fetch('https://kvdb.io/juancamilo-dechi3-db/accounts');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAccounts(data);
+            
+            // Actualizar los datos de la sesión del usuario actual si está logueado
+            const currentSavedUsername = localStorage.getItem('currentUsername');
+            if (currentSavedUsername) {
+              const matchedAcc = data.find(acc => acc.username === currentSavedUsername);
+              if (matchedAcc) {
+                setUser(matchedAcc);
+                setMovements(matchedAcc.movements || []);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.log('Error al obtener datos de la nube, usando LocalStorage:', err);
+      }
+    };
+
+    fetchAccounts();
+    const interval = setInterval(fetchAccounts, 4000); // Polling cada 4 segundos
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('accounts', JSON.stringify(accounts));
+    
+    const saveAccountsToCloud = async () => {
+      try {
+        await fetch('https://kvdb.io/juancamilo-dechi3-db/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(accounts)
+        });
+      } catch (err) {
+        console.log('Error al guardar datos en la nube:', err);
+      }
+    };
+    saveAccountsToCloud();
   }, [accounts]);
 
   useEffect(() => {
@@ -316,6 +367,25 @@ const App = () => {
     }
   }, [currentUsername]);
 
+  // Apply theme color and background image dynamically
+  useEffect(() => {
+    if (user) {
+      if (user.backgroundImage && user.backgroundImage.trim() !== '') {
+        document.body.style.backgroundImage = `url('${user.backgroundImage}')`;
+      } else {
+        document.body.style.backgroundImage = `url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80')`;
+      }
+      
+      const themeColor = user.themeColor || '#6366f1';
+      document.documentElement.style.setProperty('--accent', themeColor);
+      document.documentElement.style.setProperty('--accent-hover', themeColor + 'cc');
+    } else {
+      document.body.style.backgroundImage = `url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80')`;
+      document.documentElement.style.setProperty('--accent', '#6366f1');
+      document.documentElement.style.setProperty('--accent-hover', '#4f46e5');
+    }
+  }, [user]);
+
   return (
     <AppContext.Provider value={{ user, setUser, movements, setMovements, login, logout, accounts, addAccount, updateCurrentAccount, editMovement, deleteMovement, transferToUser }}>
       <BrowserRouter>
@@ -327,6 +397,7 @@ const App = () => {
             <Route index element={<Dashboard />} />
             <Route path="transferir" element={<Transfer />} />
             <Route path="pagar" element={<Payments />} />
+            <Route path="ajustes" element={<Ajustes />} />
             <Route path="perfil" element={<div style={{ padding: '20px' }}>Perfil (En construcción)</div>} />
           </Route>
         </Routes>

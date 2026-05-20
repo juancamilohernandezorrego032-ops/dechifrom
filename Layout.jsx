@@ -37,7 +37,7 @@ const Layout = () => {
           <li>
             <div 
               onClick={() => navigate('/')} 
-              className={`nav-item ${location.pathname === '/' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${location.pathname === '/' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-house"></i>
               <span>Inicio</span>
@@ -46,7 +46,7 @@ const Layout = () => {
           <li>
             <div 
               onClick={() => navigate('/transferir')} 
-              className={`nav-item ${location.pathname === '/transferir' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${location.pathname === '/transferir' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-paper-plane"></i>
               <span>Billetera</span>
@@ -55,7 +55,7 @@ const Layout = () => {
           <li>
             <div 
               onClick={() => navigate('/pagar')} 
-              className={`nav-item ${location.pathname === '/pagar' ? 'active' : ''}`}
+              className={`sidebar-nav-item ${location.pathname === '/pagar' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-shopping-cart"></i>
               <span>Inversiones</span>
@@ -63,11 +63,11 @@ const Layout = () => {
           </li>
           <li>
             <div 
-              onClick={() => navigate('/')} 
-              className={`nav-item ${location.pathname === '/ajustes' ? 'active' : ''}`}
+              onClick={() => navigate('/ajustes')} 
+              className={`sidebar-nav-item ${location.pathname === '/ajustes' ? 'active' : ''}`}
             >
               <i className="fa-solid fa-gear"></i>
-              <span>Ajustes</span>
+              <span>Ajustes y Personalización</span>
             </div>
           </li>
         </ul>

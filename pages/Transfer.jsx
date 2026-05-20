@@ -4,16 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 const Transfer = () => {
-  const { user, accounts, movements, updateCurrentAccount, transferToUser } = useContext(AppContext);
+  const { user, accounts, updateCurrentAccount, transferToUser } = useContext(AppContext);
   const [amount, setAmount] = useState('0');
   const [transferMode, setTransferMode] = useState('bank'); // 'bank' o 'user'
-  const [selectedBank, setSelectedBank] = useState(null);
+  
+  // Bank transfer states
+  const [selectedBank, setSelectedBank] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+
+  // User transfer states
   const [selectedUser, setSelectedUser] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   // Filtrar usuarios disponibles (excluir al usuario actual)
-  const availableUsers = accounts.filter((acc) => acc.username !== user.username);
+  const availableUsers = accounts ? accounts.filter((acc) => acc.username !== user?.username) : [];
 
   const handleAmountChange = (value) => {
     const cleaned = value.replace(/[^0-9]/g, '');
@@ -33,7 +40,7 @@ const Transfer = () => {
   const handleTransfer = async () => {
     const montoNum = parseInt(amount, 10);
 
-    // Validaciones
+    // Validar monto
     if (amount === '0') {
       Swal.fire({
         icon: 'warning',
@@ -41,31 +48,7 @@ const Transfer = () => {
         text: 'Ingresa un monto mayor a 0.',
         background: '#1a1a2e',
         color: '#f8fafc',
-        confirmButtonColor: '#6366f1',
-      });
-      return;
-    }
-
-    if (transferMode === 'bank' && !selectedBank) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Banco no seleccionado',
-        text: 'Selecciona un banco para continuar.',
-        background: '#1a1a2e',
-        color: '#f8fafc',
-        confirmButtonColor: '#6366f1',
-      });
-      return;
-    }
-
-    if (transferMode === 'user' && !selectedUser) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Usuario no seleccionado',
-        text: 'Selecciona un usuario para transferir.',
-        background: '#1a1a2e',
-        color: '#f8fafc',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: 'var(--accent)',
       });
       return;
     }
@@ -76,19 +59,30 @@ const Transfer = () => {
         icon: 'error',
         title: '❌ Saldo insuficiente',
         html: `<p style="font-size: 1rem;">No tienes suficiente saldo para esta transferencia.</p>
-               <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 10px;">Saldo disponible: <strong>$${user.balance.toLocaleString('es-CO')}</strong></p>
-               <p style="font-size: 0.9rem; color: #94a3b8;">Intentas transferir: <strong>$${montoNum.toLocaleString('es-CO')}</strong></p>`,
+               <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 10px;">Saldo disponible: <strong>$${user.balance.toLocaleString('es-CO')} COP</strong></p>
+               <p style="font-size: 0.9rem; color: #94a3b8;">Intentas transferir: <strong>$${montoNum.toLocaleString('es-CO')} COP</strong></p>`,
         background: '#1a1a2e',
         color: '#f8fafc',
-        confirmButtonColor: '#6366f1',
+        confirmButtonColor: 'var(--accent)',
       });
       return;
     }
 
-    try {
-      setLoading(true);
+    if (transferMode === 'bank') {
+      if (!selectedBank || !bankAccountNumber.trim() || !bankAccountName.trim()) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Datos incompletos',
+          text: 'Por favor selecciona el banco e ingresa el número de cuenta y el nombre del destinatario.',
+          background: '#1a1a2e',
+          color: '#f8fafc',
+          confirmButtonColor: 'var(--accent)',
+        });
+        return;
+      }
 
-      if (transferMode === 'bank') {
+      try {
+        setLoading(true);
         // Transferencia a banco externo
         const updatedUser = { ...user, balance: user.balance - montoNum };
         const updatedMovements = [
@@ -100,60 +94,90 @@ const Transfer = () => {
             type: 'expense',
             icon: 'fa-paper-plane',
           },
-          ...movements,
+          ...user.movements,
         ];
         updateCurrentAccount(updatedUser, updatedMovements);
 
         Swal.fire({
           icon: 'success',
           title: '¡Transferencia exitosa!',
-          html: `<p style="font-size: 1rem;">Se transfirieron <strong>$${montoNum.toLocaleString('es-CO')}</strong></p>
-                 <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 10px;">a <strong>${selectedBank}</strong></p>`,
+          html: `<p style="font-size: 1rem;">Se transfirieron <strong>$${montoNum.toLocaleString('es-CO')} COP</strong></p>
+                 <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 10px;">Banco: <strong>${selectedBank}</strong></p>
+                 <p style="font-size: 0.85rem; color: #94a3b8;">Cuenta: <strong>${bankAccountNumber}</strong></p>`,
           background: '#1a1a2e',
           color: '#f8fafc',
-          confirmButtonColor: '#6366f1',
-          timer: 2000,
+          confirmButtonColor: 'var(--accent)',
+          timer: 2500,
           timerProgressBar: true,
           showConfirmButton: false,
         }).then(() => navigate('/'));
-      } else {
-        // Transferencia a otro usuario
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al procesar',
+          text: 'Por favor intenta de nuevo.',
+          background: '#1a1a2e',
+          color: '#f8fafc',
+          confirmButtonColor: 'var(--accent)',
+        });
+      } finally {
+        setLoading(false);
+      }
+
+    } else {
+      // Transferencia a otro usuario de NovaPay
+      if (!selectedUser) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Usuario no seleccionado',
+          text: 'Por favor selecciona el usuario de destino de la lista.',
+          background: '#1a1a2e',
+          color: '#f8fafc',
+          confirmButtonColor: 'var(--accent)',
+        });
+        return;
+      }
+
+      try {
+        setLoading(true);
         const result = transferToUser(selectedUser.username, montoNum);
+        
         if (result.success) {
           Swal.fire({
             icon: 'success',
             title: '¡Transferencia exitosa!',
-            html: `<p style="font-size: 1rem;">Se transfirieron <strong>$${montoNum.toLocaleString('es-CO')}</strong></p>
-                   <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 10px;">a <strong>${selectedUser.name}</strong></p>`,
+            html: `<p style="font-size: 1.05rem; color: #10b981; font-weight: 600;">Envío completado</p>
+                   <p style="font-size: 1rem; margin-top: 8px;">Monto: <strong>$${montoNum.toLocaleString('es-CO')} COP</strong></p>
+                   <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 5px;">Destinatario: <strong>${selectedUser.name}</strong></p>`,
             background: '#1a1a2e',
             color: '#f8fafc',
-            confirmButtonColor: '#6366f1',
-            timer: 2000,
+            confirmButtonColor: 'var(--accent)',
+            timer: 2500,
             timerProgressBar: true,
             showConfirmButton: false,
           }).then(() => navigate('/'));
         } else {
           Swal.fire({
             icon: 'error',
-            title: 'Error en la transferencia',
+            title: 'No se pudo realizar la transferencia',
             text: result.message,
             background: '#1a1a2e',
             color: '#f8fafc',
-            confirmButtonColor: '#6366f1',
+            confirmButtonColor: 'var(--accent)',
           });
         }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de red',
+          text: 'Ocurrió un error al procesar el envío. Reintenta.',
+          background: '#1a1a2e',
+          color: '#f8fafc',
+          confirmButtonColor: 'var(--accent)',
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error al procesar la transferencia',
-        text: 'Por favor intenta de nuevo.',
-        background: '#1a1a2e',
-        color: '#f8fafc',
-        confirmButtonColor: '#6366f1',
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -170,7 +194,7 @@ const Transfer = () => {
       {/* Modo de transferencia */}
       <div style={{ display: 'flex', gap: '15px', marginBottom: '35px' }}>
         <button
-          onClick={() => { setTransferMode('bank'); setSelectedUser(null); }}
+          onClick={() => setTransferMode('bank')}
           style={{
             flex: 1,
             padding: '16px',
@@ -189,7 +213,7 @@ const Transfer = () => {
           A Banco
         </button>
         <button
-          onClick={() => { setTransferMode('user'); setSelectedBank(null); }}
+          onClick={() => setTransferMode('user')}
           style={{
             flex: 1,
             padding: '16px',
@@ -205,48 +229,87 @@ const Transfer = () => {
           }}
         >
           <i className="fas fa-users" style={{ marginRight: '8px' }}></i>
-          A Usuario
+          A Usuario NovaPay
         </button>
       </div>
 
       <div className="glass-premium" style={{ padding: '30px', marginBottom: '30px' }}>
         {/* Saldo actual */}
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '5px' }}>Saldo disponible</p>
           <h3 style={{ fontSize: '2rem', color: '#38bdf8', fontWeight: '700' }}>${user.balance.toLocaleString('es-CO')}</h3>
         </div>
 
-        {/* Selector de banco o usuario */}
+        {/* Inputs de Banco Destino */}
         {transferMode === 'bank' ? (
-          <div style={{ marginBottom: '30px' }}>
-            <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)' }}>Selecciona banco destino</label>
-            <div className="glass" style={{ padding: '16px 20px', borderRadius: '18px' }}>
-              <select
-                value={selectedBank || ''}
-                onChange={(e) => setSelectedBank(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#f8fafc',
-                  fontSize: '0.95rem',
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="" style={{ background: '#111827', color: '#fff' }}>-- Selecciona un banco --</option>
-                <option value="Bancolombia" style={{ background: '#111827', color: '#fff' }}>Bancolombia</option>
-                <option value="Davivienda" style={{ background: '#111827', color: '#fff' }}>Davivienda</option>
-                <option value="BBVA" style={{ background: '#111827', color: '#fff' }}>BBVA</option>
-                <option value="Santander" style={{ background: '#111827', color: '#fff' }}>Santander</option>
-                <option value="Nequi" style={{ background: '#111827', color: '#fff' }}>Nequi</option>
-                <option value="Otro" style={{ background: '#111827', color: '#fff' }}>Otro</option>
-              </select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '25px' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Selecciona banco destino
+              </label>
+              <div className="glass" style={{ padding: '14px 18px', borderRadius: '16px' }}>
+                <select
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#f8fafc',
+                    fontSize: '0.95rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="" style={{ background: '#111827', color: '#fff' }}>-- Selecciona un banco --</option>
+                  <option value="Bancolombia" style={{ background: '#111827', color: '#fff' }}>Bancolombia</option>
+                  <option value="Davivienda" style={{ background: '#111827', color: '#fff' }}>Davivienda</option>
+                  <option value="BBVA" style={{ background: '#111827', color: '#fff' }}>BBVA</option>
+                  <option value="Santander" style={{ background: '#111827', color: '#fff' }}>Santander</option>
+                  <option value="Nequi" style={{ background: '#111827', color: '#fff' }}>Nequi</option>
+                  <option value="Daviplata" style={{ background: '#111827', color: '#fff' }}>Daviplata</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Número de Cuenta Destino
+              </label>
+              <div className="glass" style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <i className="fa-solid fa-hashtag" style={{ color: 'rgba(255,255,255,0.5)', marginRight: '12px' }}></i>
+                <input
+                  type="text"
+                  value={bankAccountNumber}
+                  onChange={(e) => setBankAccountNumber(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Ej: 9876543210"
+                  style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '0.95rem' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Nombre del Destinatario
+              </label>
+              <div className="glass" style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <i className="fa-solid fa-signature" style={{ color: 'rgba(255,255,255,0.5)', marginRight: '12px' }}></i>
+                <input
+                  type="text"
+                  value={bankAccountName}
+                  onChange={(e) => setBankAccountName(e.target.value)}
+                  placeholder="Ej: Juan Camilo"
+                  style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '0.95rem' }}
+                />
+              </div>
             </div>
           </div>
         ) : (
-          <div style={{ marginBottom: '30px' }}>
-            <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)' }}>Selecciona usuario destino</label>
+          /* Selección de Usuario NovaPay */
+          <div style={{ marginBottom: '25px' }}>
+            <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.95rem', fontWeight: '600', color: '#fff' }}>
+              Selecciona usuario destino
+            </label>
             {availableUsers.length === 0 ? (
               <div className="glass" style={{ padding: '16px', borderRadius: '18px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 No hay otros usuarios disponibles
@@ -263,6 +326,7 @@ const Transfer = () => {
                       borderRadius: '18px',
                       cursor: 'pointer',
                       border: selectedUser?.id === acc.id ? '2px solid var(--accent)' : '2px solid transparent',
+                      boxShadow: selectedUser?.id === acc.id ? '0 0 15px rgba(99, 102, 241, 0.25)' : 'none',
                       transition: 'all 0.3s',
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -270,10 +334,12 @@ const Transfer = () => {
                     }}
                   >
                     <div>
-                      <p style={{ fontWeight: '600', fontSize: '0.9rem' }}>{acc.name}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{acc.username}</p>
+                      <p style={{ fontWeight: '600', fontSize: '0.95rem', color: '#fff' }}>{acc.name}</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>@{acc.username}</p>
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '600' }}>Saldo: ${acc.balance.toLocaleString('es-CO')}</p>
+                    <p style={{ fontSize: '0.9rem', color: '#10b981', fontWeight: '700' }}>
+                      Saldo: ${acc.balance.toLocaleString('es-CO')}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -283,8 +349,8 @@ const Transfer = () => {
 
         {/* Monto */}
         <div style={{ marginBottom: '30px' }}>
-          <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-muted)' }}>Monto a transferir</label>
-          <div className="glass" style={{ padding: '20px', borderRadius: '18px', textAlign: 'center', marginBottom: '25px' }}>
+          <label style={{ display: 'block', marginBottom: '12px', fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Monto a transferir</label>
+          <div className="glass" style={{ padding: '18px', borderRadius: '18px', textAlign: 'center', marginBottom: '20px' }}>
             <input
               type="text"
               value={`$${(amount === '0' ? '' : amount).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`}
@@ -294,7 +360,7 @@ const Transfer = () => {
                 width: '100%',
                 background: 'transparent',
                 border: 'none',
-                fontSize: '2.2rem',
+                fontSize: '2rem',
                 fontWeight: '700',
                 textAlign: 'center',
                 outline: 'none',
@@ -350,7 +416,6 @@ const Transfer = () => {
               style={{
                 padding: '16px',
                 borderRadius: '16px',
-                border: 'none',
                 fontSize: '1.25rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -367,7 +432,6 @@ const Transfer = () => {
               style={{
                 padding: '16px',
                 borderRadius: '16px',
-                border: 'none',
                 fontSize: '1.25rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -388,7 +452,7 @@ const Transfer = () => {
           className="btn-signin"
           style={{
             marginTop: '10px',
-            background: loading ? 'rgba(99, 102, 241, 0.5)' : 'var(--accent)',
+            background: loading ? 'rgba(255,255,255,0.1)' : 'var(--accent)',
             cursor: loading ? 'not-allowed' : 'pointer'
           }}
         >

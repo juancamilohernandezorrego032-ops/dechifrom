@@ -111,33 +111,46 @@ body {
     gap: 10px;
 }
 
-.nav-item {
+.sidebar-nav-item {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 16px;
     padding: 14px 20px;
     border-radius: 18px;
-    color: var(--text-primary);
+    color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
-    font-weight: 500;
-    font-size: 0.95rem;
-    transition: all 0.3s;
-    cursor: pointer;
-}
-
-.nav-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.nav-item.active {
-    background: rgba(255, 255, 255, 0.1);
     font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 1px solid transparent;
 }
 
-.nav-item i {
-    font-size: 1.1rem;
-    width: 20px;
-    text-align: center;
+.sidebar-nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+.sidebar-nav-item.active {
+    background: rgba(99, 102, 241, 0.25);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.25);
+    color: #fff;
+    font-weight: 700;
+}
+
+.sidebar-nav-item i {
+    font-size: 1.25rem;
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.3s;
+}
+
+.sidebar-nav-item.active i {
+    color: #fff;
 }
 
 /* Sidebar Profile */
