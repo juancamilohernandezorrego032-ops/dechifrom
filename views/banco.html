@@ -1,0 +1,126 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>NovaPay - Dashboard Premium</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="../assets/css/banco.css">
+</head>
+<body>
+
+<div class="dashboard-layout animate-fade-in">
+    <!-- BARRA LATERAL IZQUIERDA -->
+    <aside class="sidebar glass">
+        <div class="brand">
+            <i class="fa-solid fa-building-columns text-vivid"></i>
+            <span>NovaPay</span>
+        </div>
+        
+        <div class="user-profile">
+            <div class="avatar-lg"></div>
+            <h3 id="username"></h3>
+            <p class="user-status text-vivid">Premium Account</p>
+        </div>
+
+        <nav class="side-nav">
+            <a href="banco.html" class="active"><i class="fa-solid fa-house"></i> Inicio</a>
+            <a href="#"><i class="fa-solid fa-wallet"></i> Billetera</a>
+            <a href="inversiones.html" target="_blank"><i class="fa-solid fa-chart-line"></i> Inversiones</a>
+            <a href="ajustes.html"><i class="fa-solid fa-gear"></i> Ajustes</a>
+        </nav>
+
+        <button onclick="localStorage.clear(); window.location.href='../index.html'" class="btn-logout">
+            <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+        </button>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL CENTRO -->
+    <main class="main-content">
+        <!-- SALDO PRINCIPAL -->
+        <section class="card balance-card glass animate-fade-in">
+            <div class="card-glow"></div>
+            <p class="label">Saldo disponible</p>
+            <h1 class="amount">$<span id="balance">0</span></h1>
+            <div class="card-footer">
+                <span class="card-type">Priority Debit</span>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" width="40" alt="Mastercard" />
+            </div>
+        </section>
+
+        <!-- ACCIONES RÁPIDAS -->
+        <div class="actions dashboard-actions">
+            <button class="action-btn glass" onclick="openModal('deposit')">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <span>Depositar</span>
+            </button>
+            <button class="action-btn glass" onclick="openModal('withdraw')">
+                <i class="fa-solid fa-money-bill-transfer"></i>
+                <span>Retirar</span>
+            </button>
+            <button class="action-btn glass active" onclick="openModal('transfer')">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Transferir</span>
+            </button>
+        </div>
+
+        <!-- SECCIÓN HISTORIAL -->
+        <section class="history-section full-width glass">
+            <div class="section-title">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Movimientos Recientes</h3>
+            </div>
+            <ul id="history" class="transaction-list"></ul>
+        </section>
+    </main>
+
+    <!-- PANEL DERECHO (TIENDA Y CARRITO) -->
+    <aside class="right-panel">
+        <!-- SECCIÓN TIENDA -->
+        <section class="shop-section glass">
+            <div class="section-title">
+                <h2><i class="fa-solid fa-bag-shopping"></i> Tienda Market</h2>
+                <span class="accent-link">Ver todo</span>
+            </div>
+            <div class="shop-grid" id="shop"></div>
+        </section>
+
+        <!-- SECCIÓN CARRITO -->
+        <section class="cart-section glass mt-container">
+            <h3><i class="fa-solid fa-cart-shopping"></i> Carrito</h3>
+            <ul id="cart" class="item-list"></ul>
+            <div class="cart-actions">
+                <button class="btn-primary" onclick="buy()">
+                    <span>Comprar ahora</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+    </aside>
+</div>
+
+<!-- MODAL PREMIUM -->
+<div class="modal glass-overlay" id="modal">
+  <div class="modal-content glass-premium animate-fade-in">
+    <div class="modal-header">
+        <h2 id="modal-title">Operación</h2>
+        <i class="fa-solid fa-xmark close-btn" onclick="closeModal()"></i>
+    </div>
+    <div class="modal-body">
+        <div class="input-field">
+            <i class="fa-solid fa-coins"></i>
+            <input type="number" id="amount" placeholder="Monto a transaccionar">
+        </div>
+        <div class="input-field" id="toUserContainer">
+            <i class="fa-solid fa-user-tag"></i>
+            <input type="text" id="toUser" placeholder="Usuario destino">
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button onclick="confirmAction()" class="btn-confirm">Confirmar Acción</button>
+    </div>
+  </div>
+</div>
+
+<!-- SISTEMA DE NOTIFICACIONES TOAST -->
+<div id="toast-container" class="toast-container"></div>
+
+<script src="../assets/js/banco.js"></script>
+</body>
+</html>

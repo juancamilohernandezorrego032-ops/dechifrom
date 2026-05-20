@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>NovaPay - Admin Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="../assets/css/admin.css" />
+</head>
+<body>
+    
+    <!-- PANTALLA DE ACCESO ADMIN -->
+    <section id="login-screen" class="screen">
+        <div class="login-box glass-premium animate-fade-in" style="text-align: center; max-width: 400px; margin: auto; margin-top: 15vh;">
+            <i class="fa-solid fa-user-shield" style="font-size: 3rem; color: var(--admin-accent); margin-bottom: 20px;"></i>
+            <h1 style="margin-bottom: 30px; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 2px;">Area Restringida</h1>
+            <div class="input-group">
+                <i class="fa-solid fa-key"></i>
+                <input type="password" id="adminPass" placeholder="Contraseña de Administrador" required />
+            </div>
+            <button class="btn-primary btn-admin" id="btnAdminLogin">VERIFICAR ACCESO</button>
+            
+            <p style="margin-top: 15px; font-size: 0.8rem; color: rgba(255,255,255,0.4);">Pista: la contraseña es "admin123"</p>
+            
+            <a href="../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Volver a usuarios</a>
+        </div>
+    </section>
+
+    <!-- DASHBOARD ADMIN (Oculto hasta hacer login) -->
+    <section id="admin-dashboard" class="dashboard-layout hidden animate-fade-in">
+        <!-- BARRA LATERAL -->
+        <aside class="sidebar glass-dark">
+            <div class="brand">
+                <i class="fa-solid fa-shield-halved" style="color: var(--admin-accent);"></i>
+                <span>Nova Admin</span>
+            </div>
+            
+            <nav class="side-nav">
+                <a href="#" class="active"><i class="fa-solid fa-chart-pie"></i> Estadísticas</a>
+                <a href="#"><i class="fa-solid fa-users"></i> Usuarios</a>
+                <a href="#"><i class="fa-solid fa-clock-rotate-left"></i> Transacciones</a>
+                <a href="inversiones.html" target="_blank"><i class="fa-solid fa-globe"></i> Inversiones / Mapa</a>
+                <a href="#"><i class="fa-solid fa-triangle-exclamation"></i> Alertas</a>
+            </nav>
+
+            <button onclick="logoutAdmin()" class="btn-logout" style="margin-top: auto;">
+                <i class="fa-solid fa-right-from-bracket"></i> Salir del Sistema
+            </button>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            
+            <div class="header-admin">
+                <h2>Panel de Control Global</h2>
+                <div class="live-indicator"><span class="dot"></span> Sistema En Línea</div>
+            </div>
+
+            <!-- TARJETAS DE MÉTRICAS -->
+            <div class="stats-grid">
+                <div class="stat-card glass-dark">
+                    <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                    <div class="stat-info">
+                        <p>Usuarios Activos</p>
+                        <h3>1</h3>
+                    </div>
+                </div>
+                <div class="stat-card glass-dark">
+                    <div class="stat-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+                    <div class="stat-info">
+                        <p>Volumen Transado</p>
+                        <h3 id="stat-volume">$0</h3>
+                    </div>
+                </div>
+                <div class="stat-card glass-dark">
+                    <div class="stat-icon" style="color: #22c55e;"><i class="fa-solid fa-piggy-bank"></i></div>
+                    <div class="stat-info">
+                        <p>Liquidez Total</p>
+                        <h3 id="stat-liquidity">$0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLA DE MOVIMIENTOS -->
+            <div class="table-section glass-dark mt-container">
+                <h3><i class="fa-solid fa-server"></i> Registro de Actividad Global (Auditoría)</h3>
+                
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha y Hora</th>
+                                <th>Usuario</th>
+                                <th>Tipo de Operación</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body">
+                            <!-- JS inyecta filas aquí -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </section>
+
+    <!-- SISTEMA DE NOTIFICACIONES TOAST -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="../assets/js/admin.js"></script>
+</body>
+</html>
