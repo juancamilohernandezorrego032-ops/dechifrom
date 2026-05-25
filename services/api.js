@@ -1,25 +1,44 @@
 // HU07 - Módulo centralizado de configuración de red
+import { logGetRequest } from './logger';
+import { rutas as NEOAPP_RUTAS, obtenerGastos } from './neoappApi';
+
 const BASE_URL = 'https://jsonplaceholder.typicode.com';
+const NEOAPP_GASTOS = NEOAPP_RUTAS.gastos;
 
 const ENDPOINTS = {
   login: `${BASE_URL}/users`,
-  gastos: `${BASE_URL}/posts`,
+  gastos: NEOAPP_GASTOS,
   transferencias: `${BASE_URL}/posts`,
 };
 
 // Función genérica para peticiones HTTP
 const request = async (url, options = {}) => {
   const token = localStorage.getItem('token');
+  const method = options.method || 'GET';
 
   const defaultHeaders = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers: { ...defaultHeaders, ...options.headers },
-  });
+  console.log(`[NovaPay][${method}]`, url, options.body ? { body: options.body } : {});
+
+  const response = method === 'GET'
+    ? await logGetRequest(url, {
+        ...options,
+        headers: { ...defaultHeaders, ...options.headers },
+      })
+    : await fetch(url, {
+        ...options,
+        headers: { ...defaultHeaders, ...options.headers },
+      });
+
+  if (method !== 'GET') {
+    console.log(`[NovaPay][${method}][RESPONSE]`, url, {
+      status: response.status,
+      ok: response.ok,
+    });
+  }
 
   if (!response.ok) {
     throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -37,9 +56,16 @@ export const authService = {
     }),
 };
 
-// Servicios de gastos
+// Servicios de gastos (NeoApp API local)
 export const gastosService = {
-  getAll: () => request(ENDPOINTS.gastos),
+  getAll: async () => {
+    try {
+      return await obtenerGastos();
+    } catch (error) {
+      console.warn('[NovaPay] Fallback gastos jsonplaceholder:', error?.message);
+      return request(`${BASE_URL}/posts`);
+    }
+  },
   create: (gasto) =>
     request(ENDPOINTS.gastos, {
       method: 'POST',

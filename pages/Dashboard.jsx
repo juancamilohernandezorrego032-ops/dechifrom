@@ -3,6 +3,7 @@ import { AppContext } from '../App';
 import { gastosService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { logEvent } from '../services/logger';
 
 const Dashboard = () => {
   const { user, movements, logout, editMovement, deleteMovement, updateCurrentAccount } = useContext(AppContext);
@@ -33,6 +34,7 @@ const Dashboard = () => {
   const handleConfirmDeposit = (e) => {
     e.preventDefault();
     const amountVal = parseInt(modalAmount.replace(/\D/g, ''), 10);
+    logEvent('deposit:submit', { amount: amountVal || 0, username: user?.username });
     if (!amountVal || amountVal <= 0) {
       Swal.fire({
         icon: 'warning',
@@ -58,6 +60,11 @@ const Dashboard = () => {
       ...movements,
     ];
     updateCurrentAccount(updatedUser, updatedMovements);
+    logEvent('deposit:success', {
+      username: user.username,
+      amount: amountVal,
+      balance: updatedUser.balance,
+    });
 
     setIsDepositOpen(false);
     setModalAmount('');
@@ -79,6 +86,7 @@ const Dashboard = () => {
   const handleConfirmWithdraw = (e) => {
     e.preventDefault();
     const amountVal = parseInt(modalAmount.replace(/\D/g, ''), 10);
+    logEvent('withdraw:submit', { amount: amountVal || 0, username: user?.username });
     if (!amountVal || amountVal <= 0) {
       Swal.fire({
         icon: 'warning',
@@ -117,6 +125,11 @@ const Dashboard = () => {
       ...movements,
     ];
     updateCurrentAccount(updatedUser, updatedMovements);
+    logEvent('withdraw:success', {
+      username: user.username,
+      amount: amountVal,
+      balance: updatedUser.balance,
+    });
 
     setIsWithdrawOpen(false);
     setModalAmount('');
@@ -137,6 +150,11 @@ const Dashboard = () => {
   // Buy item from market store (converts USD to COP at 1 USD = 4,000 COP)
   const handleBuyProduct = async (product) => {
     const copPrice = product.priceUsd * 4000;
+    logEvent('market:click', {
+      product: product.name,
+      priceUsd: product.priceUsd,
+      priceCop: copPrice,
+    });
 
     const confirmResult = await Swal.fire({
       icon: 'question',
@@ -182,6 +200,12 @@ const Dashboard = () => {
       ...movements,
     ];
     updateCurrentAccount(updatedUser, updatedMovements);
+    logEvent('market:purchase:success', {
+      username: user.username,
+      product: product.name,
+      amount: copPrice,
+      balance: updatedUser.balance,
+    });
 
     Swal.fire({
       icon: 'success',
@@ -197,6 +221,11 @@ const Dashboard = () => {
   };
 
   const handleEditMovementPrompt = async (move) => {
+    logEvent('movement:edit:open', {
+      movementId: move.id,
+      title: move.title,
+      amount: move.amount,
+    });
     const { value: newAmount } = await Swal.fire({
       title: 'Editar monto',
       input: 'text',
@@ -224,6 +253,11 @@ const Dashboard = () => {
 
     const actualAmount = move.type === 'expense' ? -newAmount : newAmount;
     editMovement(move.id, { amount: actualAmount });
+    logEvent('movement:edit:success', {
+      movementId: move.id,
+      previousAmount: move.amount,
+      newAmount: actualAmount,
+    });
 
     Swal.fire({
       icon: 'success',
@@ -239,6 +273,11 @@ const Dashboard = () => {
   };
 
   const handleDeleteMovementPrompt = async (move) => {
+    logEvent('movement:delete:open', {
+      movementId: move.id,
+      title: move.title,
+      amount: move.amount,
+    });
     const confirmResult = await Swal.fire({
       icon: 'warning',
       title: '¿Eliminar y devolver?',
@@ -257,6 +296,11 @@ const Dashboard = () => {
     if (!confirmResult.isConfirmed) return;
 
     deleteMovement(move.id);
+    logEvent('movement:delete:success', {
+      movementId: move.id,
+      title: move.title,
+      amount: move.amount,
+    });
 
     Swal.fire({
       icon: 'success',

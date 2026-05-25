@@ -2,12 +2,18 @@ import React, { useContext } from 'react';
 import { AppContext } from '../App';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { logEvent } from '../services/logger';
 
 const Payments = () => {
   const { user, movements, updateCurrentAccount } = useContext(AppContext);
   const navigate = useNavigate();
 
   const handlePurchase = async (category) => {
+    logEvent('payment:category_click', {
+      category: category.title,
+      defaultAmount: category.defaultAmount,
+    });
+
     const { value: amountString } = await Swal.fire({
       title: `Cuánto pagar en ${category.title}`,
       input: 'text',
@@ -81,6 +87,12 @@ const Payments = () => {
       ...movements,
     ];
     updateCurrentAccount(updatedUser, updatedMovements);
+    logEvent('payment:success', {
+      username: user.username,
+      category: category.title,
+      amount,
+      balance: updatedUser.balance,
+    });
 
     Swal.fire({
       icon: 'success',

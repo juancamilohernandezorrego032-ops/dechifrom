@@ -70,6 +70,15 @@ const Layout = () => {
               <span>Ajustes y Personalización</span>
             </div>
           </li>
+          <li>
+            <div
+              onClick={() => navigate('/reporte')}
+              className={`sidebar-nav-item ${location.pathname === '/reporte' ? 'active' : ''}`}
+            >
+              <i className="fa-solid fa-chart-line"></i>
+              <span>Reporte y Graficas</span>
+            </div>
+          </li>
         </ul>
 
         {/* Logout at bottom */}

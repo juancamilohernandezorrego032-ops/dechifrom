@@ -1,4 +1,4 @@
-import React, { useState, createContext, useEffect } from 'react';
+import React, { useState, createContext, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import Layout from './Layout';
@@ -8,9 +8,14 @@ import Dashboard from './pages/Dashboard';
 import Transfer from './pages/Transfer';
 import Payments from './pages/Payments';
 import Ajustes from './pages/Ajustes';
+import ReporteGraficas from './pages/ReporteGraficas';
+import { logEvent } from './services/logger';
 
 // Context para el estado global
 export const AppContext = createContext();
+
+const CLOUD_URL = 'https://kvdb.io/juancamilo-dechi3-db/accounts';
+const ENABLE_CLOUD_SYNC = false;
 
 const App = () => {
   const defaultAccounts = [
@@ -38,6 +43,7 @@ const App = () => {
   const [currentUsername, setCurrentUsername] = useState(() => localStorage.getItem('currentUsername') || null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('token'));
+  const cloudSyncDisabledRef = useRef(false);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');
@@ -59,6 +65,11 @@ const App = () => {
   });
 
   const updateCurrentAccount = (updatedUser, updatedMovements) => {
+    logEvent('account:update', {
+      username: updatedUser?.username,
+      balance: updatedUser?.balance,
+      movementsCount: updatedMovements?.length || 0,
+    });
     setUser(updatedUser);
     setMovements(updatedMovements);
     setAccounts((prevAccounts) => prevAccounts.map((account) => {
@@ -106,16 +117,38 @@ const App = () => {
 
   // Transferir a otro usuario por username (solo con el nombre / selector)
   const transferToUser = (recipientUsername, amount) => {
+    logEvent('transfer:user:attempt', {
+      from: user?.username,
+      to: recipientUsername,
+      amount,
+    });
+
     const recipient = accounts.find((acc) => acc.username === recipientUsername);
     if (!recipient) {
+      logEvent('transfer:user:failed', {
+        reason: 'recipient_not_found',
+        to: recipientUsername,
+        amount,
+      });
       return { success: false, message: 'La cuenta de destino no existe.' };
     }
 
     if (amount > user.balance) {
+      logEvent('transfer:user:failed', {
+        reason: 'insufficient_balance',
+        from: user?.username,
+        to: recipientUsername,
+        amount,
+      });
       return { success: false, message: 'Saldo insuficiente.' };
     }
 
     if (recipient.username === user.username) {
+      logEvent('transfer:user:failed', {
+        reason: 'same_account',
+        username: user.username,
+        amount,
+      });
       return { success: false, message: 'No puedes transferir dinero a tu propia cuenta.' };
     }
 
@@ -166,10 +199,22 @@ const App = () => {
       )
     );
 
+    logEvent('transfer:user:success', {
+      from: user.username,
+      to: recipient.username,
+      amount,
+      senderBalance: updatedSender.balance,
+      recipientBalance: updatedRecipient.balance,
+    });
+
     return { success: true, message: 'Transferencia exitosa' };
   };
 
   const addAccount = (account) => {
+    logEvent('account:create', {
+      username: account?.username,
+      accountNumber: account?.accountNumber,
+    });
     setAccounts((prev) => [...prev, account]);
   };
 
@@ -184,8 +229,12 @@ const App = () => {
   };
 
   const login = (username, password) => {
+    logEvent('login:attempt', { username });
     const account = accounts.find((item) => item.username === username && item.pin === password);
-    if (!account) return false;
+    if (!account) {
+      logEvent('login:failed', { username });
+      return false;
+    }
 
     // Detectar cambio de cuenta
     const isAccountSwitch = currentUsername && currentUsername !== username;
@@ -225,6 +274,7 @@ const App = () => {
     setUser(account);
     setMovements(account.movements || []);
     setIsLoggedIn(true);
+    logEvent('login:success', { username, name: account.name });
     return true;
   };
 
@@ -243,6 +293,7 @@ const App = () => {
 
     const handlePopState = () => {
       console.log('[App] popstate navigation detected, logging out...');
+      logEvent('browser:navigation:blocked', { type: 'popstate', path: window.location.pathname });
       logout();
     };
 
@@ -256,12 +307,14 @@ const App = () => {
         const isEditable = active && (active.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA');
         if (!isEditable) {
           e.preventDefault();
+          logEvent('keyboard:blocked', { key: e.key, path: window.location.pathname });
         }
       }
 
       // Evitar Alt+ArrowLeft/ArrowRight (navegación atrás/adelante)
       if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();
+        logEvent('keyboard:blocked', { key: e.key, altKey: true, path: window.location.pathname });
       }
 
       // Evitar Ctrl+Tab/Shift+Ctrl+Tab handled by browser; don't try to block those.
@@ -288,6 +341,7 @@ const App = () => {
 
   // HU10 - Limpiar localStorage al hacer logout
   const logout = () => {
+    logEvent('logout', { username: user?.username });
     clearSession();
 
     Swal.fire({
@@ -305,11 +359,44 @@ const App = () => {
 
   // Sincronización en la nube con kvdb.io (Permite transferir y ver saldos desde otro computador en tiempo real)
   useEffect(() => {
+    const handleDocumentClick = (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      logEvent('ui:click', {
+        path: window.location.pathname,
+        text: target?.textContent?.trim()?.slice(0, 80) || '',
+        tag: target?.tagName || 'UNKNOWN',
+        className: typeof target?.className === 'string' ? target.className : '',
+      });
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, []);
+
+  useEffect(() => {
+    if (!ENABLE_CLOUD_SYNC) {
+      return undefined;
+    }
+
     const fetchAccounts = async () => {
+      if (cloudSyncDisabledRef.current) {
+        return;
+      }
+
       try {
-        const res = await fetch('https://kvdb.io/juancamilo-dechi3-db/accounts');
+        const res = await fetch(CLOUD_URL);
+        if (res.status === 404) {
+          cloudSyncDisabledRef.current = true;
+          return;
+        }
+
         if (res.ok) {
-          const data = await res.json();
+          const rawData = await res.text();
+          if (!rawData) {
+            return;
+          }
+
+          const data = JSON.parse(rawData);
           if (Array.isArray(data) && data.length > 0) {
             setAccounts(data);
             
@@ -336,14 +423,26 @@ const App = () => {
 
   useEffect(() => {
     localStorage.setItem('accounts', JSON.stringify(accounts));
+
+    if (!ENABLE_CLOUD_SYNC) {
+      return;
+    }
     
     const saveAccountsToCloud = async () => {
+      if (cloudSyncDisabledRef.current) {
+        return;
+      }
+
       try {
-        await fetch('https://kvdb.io/juancamilo-dechi3-db/accounts', {
-          method: 'POST',
+        const res = await fetch(CLOUD_URL, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(accounts)
         });
+
+        if (res.status === 404) {
+          cloudSyncDisabledRef.current = true;
+        }
       } catch (err) {
         console.log('Error al guardar datos en la nube:', err);
       }
@@ -398,6 +497,7 @@ const App = () => {
             <Route path="transferir" element={<Transfer />} />
             <Route path="pagar" element={<Payments />} />
             <Route path="ajustes" element={<Ajustes />} />
+            <Route path="reporte" element={<ReporteGraficas />} />
             <Route path="perfil" element={<div style={{ padding: '20px' }}>Perfil (En construcción)</div>} />
           </Route>
         </Routes>

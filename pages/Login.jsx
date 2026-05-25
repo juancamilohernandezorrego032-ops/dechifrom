@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AppContext } from '../App';
 import Swal from 'sweetalert2';
+import { logEvent } from '../services/logger';
 
 // HU09 - Notificaciones con SweetAlert2 (prohibido usar alert() nativo)
 const Login = () => {
@@ -13,8 +14,10 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    logEvent('login:submit', { username: username.trim() });
 
     if (!username || !password) {
+      logEvent('login:validation_failed', { reason: 'missing_fields' });
       Swal.fire({
         icon: 'warning',
         title: 'Campos incompletos',
@@ -35,6 +38,7 @@ const Login = () => {
     }
 
     if (!result) {
+      logEvent('login:denied', { username: username.trim() });
       setPassword('');
       setError(true);
       Swal.fire({
@@ -146,7 +150,7 @@ const Login = () => {
             <input
               type="text"
               value={username}
-              onChange={(e) => { setUsername(e.target.value); setError(false); }}
+              onChange={(e) => { setUsername(e.target.value); setError(false); logEvent('login:input_username', { valueLength: e.target.value.length }); }}
               placeholder="Username"
             />
           </div>
@@ -156,7 +160,7 @@ const Login = () => {
             <input
               type="password"
               value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(false); }}
+              onChange={(e) => { setPassword(e.target.value); setError(false); logEvent('login:input_password', { valueLength: e.target.value.length }); }}
               placeholder="Password"
             />
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AppContext } from '../App';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { logEvent } from '../services/logger';
 
 const Transfer = () => {
   const { user, accounts, updateCurrentAccount, transferToUser } = useContext(AppContext);
@@ -39,6 +40,12 @@ const Transfer = () => {
 
   const handleTransfer = async () => {
     const montoNum = parseInt(amount, 10);
+    logEvent('transfer:submit', {
+      mode: transferMode,
+      amount: montoNum || 0,
+      selectedBank,
+      selectedUser: selectedUser?.username || null,
+    });
 
     // Validar monto
     if (amount === '0') {
@@ -97,6 +104,14 @@ const Transfer = () => {
           ...user.movements,
         ];
         updateCurrentAccount(updatedUser, updatedMovements);
+        logEvent('transfer:bank:success', {
+          from: user.username,
+          bank: selectedBank,
+          accountNumber: bankAccountNumber,
+          accountName: bankAccountName,
+          amount: montoNum,
+          balance: updatedUser.balance,
+        });
 
         Swal.fire({
           icon: 'success',
@@ -143,6 +158,11 @@ const Transfer = () => {
         const result = transferToUser(selectedUser.username, montoNum);
         
         if (result.success) {
+          logEvent('transfer:novapay:success', {
+            from: user.username,
+            to: selectedUser.username,
+            amount: montoNum,
+          });
           Swal.fire({
             icon: 'success',
             title: '¡Transferencia exitosa!',
@@ -157,6 +177,12 @@ const Transfer = () => {
             showConfirmButton: false,
           }).then(() => navigate('/'));
         } else {
+          logEvent('transfer:novapay:failed', {
+            from: user.username,
+            to: selectedUser.username,
+            amount: montoNum,
+            message: result.message,
+          });
           Swal.fire({
             icon: 'error',
             title: 'No se pudo realizar la transferencia',

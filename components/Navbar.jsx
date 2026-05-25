@@ -27,8 +27,8 @@ const Navbar = () => {
       <NavLink to="/pagar" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
         <i className="fas fa-shopping-cart"></i>
       </NavLink>
-      <NavLink to="/perfil" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-        <i className="fas fa-user"></i>
+      <NavLink to="/reporte" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+        <i className="fas fa-chart-line"></i>
       </NavLink>
 
       <style>{`
